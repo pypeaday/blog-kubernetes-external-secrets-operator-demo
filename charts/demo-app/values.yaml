@@ -1,0 +1,52 @@
+replicaCount: 1
+
+image:
+  repository: demo-app
+  pullPolicy: Never
+  tag: latest
+
+service:
+  type: NodePort
+  port: 8000
+  nodePort: 30080
+
+envFrom:
+  secrets:
+    enabled: true
+    name: demo-app-secrets
+  configs:
+    enabled: true
+    name: demo-app-config
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 8000
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+# Volume mounts for secrets as files
+volumes:
+  secrets:
+    enabled: true
+    name: demo-app-tls-files
+    mountPath: /etc/secrets
+  configs:
+    enabled: true
+    name: demo-app-config-files
+    mountPath: /etc/config

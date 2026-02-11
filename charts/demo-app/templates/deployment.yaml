@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "demo-app.fullname" . }}
+  labels:
+    {{- include "demo-app.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "demo-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "demo-app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          {{- if .Values.envFrom.secrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFrom.secrets.name }}
+          {{- end }}
+          {{- if .Values.envFrom.configs.enabled }}
+            - secretRef:
+                name: {{ .Values.envFrom.configs.name }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if or .Values.volumes.secrets.enabled .Values.volumes.configs.enabled }}
+          volumeMounts:
+            {{- if .Values.volumes.secrets.enabled }}
+            - name: secrets-volume
+              mountPath: {{ .Values.volumes.secrets.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.volumes.configs.enabled }}
+            - name: configs-volume
+              mountPath: {{ .Values.volumes.configs.mountPath }}
+              readOnly: true
+            {{- end }}
+          {{- end }}
+      {{- if or .Values.volumes.secrets.enabled .Values.volumes.configs.enabled }}
+      volumes:
+        {{- if .Values.volumes.secrets.enabled }}
+        - name: secrets-volume
+          secret:
+            secretName: {{ .Values.volumes.secrets.name }}
+        {{- end }}
+        {{- if .Values.volumes.configs.enabled }}
+        - name: configs-volume
+          secret:
+            secretName: {{ .Values.volumes.configs.name }}
+        {{- end }}
+      {{- end }}
